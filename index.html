@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overtidslogg</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1f6f5c">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Overtid">
+<style>
+  :root{
+    --bg:#f4f1ec; --card:#fff; --ink:#1f2328; --muted:#6b7280; --line:#e6e1d8;
+    --accent:#1f6f5c; --accent-soft:#e3f1ec; --danger:#b4412f;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#16181b; --card:#1f2226; --ink:#e9e6e1; --muted:#9aa0a6; --line:#2e3237;
+      --accent:#5cc3a6; --accent-soft:#1d3530; --danger:#e07a68; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
+  .wrap{max-width:560px;margin:0 auto;padding:24px 16px 48px}
+  h1{font-size:1.4rem;margin:0 0 18px;letter-spacing:-.01em}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .stat .lbl{font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .stat .val{font-size:2rem;font-weight:700;font-variant-numeric:tabular-nums}
+  .stat .val small{font-size:1rem;font-weight:500;color:var(--muted)}
+  .stat.main .val{color:var(--accent)}
+  form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  label{font-size:.8rem;color:var(--muted);display:block;margin-bottom:4px}
+  input{width:100%;padding:10px 12px;font:inherit;color:var(--ink);background:var(--bg);
+    border:1px solid var(--line);border-radius:10px}
+  input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .full{grid-column:1/-1}
+  button{font:inherit;cursor:pointer;border:0;border-radius:10px}
+  .primary{background:var(--accent);color:#fff;padding:12px;font-weight:600}
+  .monthnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .monthnav h2{font-size:1.05rem;margin:0;text-transform:capitalize}
+  .nav{background:var(--accent-soft);color:var(--accent);width:38px;height:38px;font-size:1.1rem}
+  ul{list-style:none;margin:0;padding:0}
+  li{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+  li:first-child{border-top:0}
+  .d{width:64px;flex-shrink:0;font-variant-numeric:tabular-nums}
+  .d b{display:block}
+  .d span{font-size:.8rem;color:var(--muted);text-transform:capitalize}
+  .note{flex:1;color:var(--muted);font-size:.9rem;overflow:hidden;text-overflow:ellipsis}
+  .h{font-weight:700;font-variant-numeric:tabular-nums}
+  .del{background:none;color:var(--muted);font-size:1.1rem;padding:4px 8px}
+  .del:hover{color:var(--danger)}
+  .empty{color:var(--muted);text-align:center;padding:14px 0}
+  .bars{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;align-items:end;height:70px;margin-top:6px}
+  .bar{background:var(--accent-soft);border-radius:4px 4px 0 0;position:relative;cursor:pointer;min-height:3px}
+  .bar.on{background:var(--accent)}
+  .barlbl{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;font-size:.7rem;color:var(--muted);text-align:center;margin-top:4px}
+  .histhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .histhead h2{font-size:1.05rem;margin:0}
+  .histhead span{font-size:.85rem;color:var(--muted)}
+  .yr{font-size:.85rem;color:var(--muted);font-weight:600;margin:14px 0 4px}
+  details{border-top:1px solid var(--line)}
+  summary{display:flex;justify-content:space-between;padding:10px 0;cursor:pointer;list-style:none}
+  summary .m{text-transform:capitalize}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:'›';display:inline-block;width:16px;color:var(--muted);transition:transform .15s}
+  details[open] summary::before{transform:rotate(90deg)}
+  summary .m{flex:1}
+  summary .s{font-weight:700;font-variant-numeric:tabular-nums;color:var(--accent)}
+  details ul{padding:0 0 6px 16px}
+  .mlist{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;column-gap:20px}
+  .mrow{display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid var(--line);cursor:pointer}
+  .mrow .k{text-transform:capitalize}
+  .mrow .v{font-weight:700;font-variant-numeric:tabular-nums}
+  .mrow.zero .v{color:var(--muted);font-weight:400}
+  .mrow.on .k,.mrow.on .v{color:var(--accent)}
+  .mtot{grid-column:1/-1;display:flex;justify-content:space-between;padding:9px 0 0;border-top:2px solid var(--line);font-weight:700}
+  .tools{display:flex;gap:8px;justify-content:center;margin-top:8px}
+  .tools button{background:none;color:var(--muted);font-size:.85rem;text-decoration:underline;padding:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Overtidslogg</h1>
+
+  <div class="card stats">
+    <div class="stat main"><div class="lbl" id="lblMonth">Denne måneden</div><div class="val" id="sumMonth">0</div></div>
+    <div class="stat"><div class="lbl" id="lblYear">Hittil i år</div><div class="val" id="sumYear">0</div></div>
+  </div>
+
+  <div class="card">
+    <form id="f">
+      <div><label for="date">Dato</label><input type="date" id="date" required></div>
+      <div><label for="hours">Timer overtid</label><input type="number" id="hours" step="0.25" min="0.25" max="24" placeholder="f.eks. 1.5" required></div>
+      <div class="full"><label for="note">Notat (valgfritt)</label><input type="text" id="note" maxlength="80" placeholder="Hva jobbet du med?"></div>
+      <button class="primary full" type="button" id="add">Legg til</button>
+      <div class="full" id="msg" style="color:var(--danger);font-size:.85rem;min-height:1em"></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="monthnav">
+      <button class="nav" id="prev" aria-label="Forrige måned">‹</button>
+      <h2 id="monthTitle"></h2>
+      <button class="nav" id="next" aria-label="Neste måned">›</button>
+    </div>
+    <ul id="list"></ul>
+  </div>
+
+  <div class="card">
+    <label id="yearTitle">Per måned</label>
+    <div class="bars" id="bars"></div>
+    <div class="barlbl" id="barlbl"></div>
+    <div class="mlist" id="mlist"></div>
+  </div>
+
+  <div class="card">
+    <div class="histhead"><h2>Historikk</h2><span id="histCount"></span></div>
+    <div id="hist"></div>
+  </div>
+
+  <div class="tools">
+    <button id="exp">Eksporter sikkerhetskopi</button>
+    <button id="imp">Importer</button>
+    <input type="file" id="file" accept=".json,.txt,application/json,text/plain" hidden>
+  </div>
+</div>
+
+<script>
+const KEY = 'overtidslogg_v1';
+const MONTHS = ['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
+let entries = load();
+// Fjern de forhåndsregistrerte 2 timene (17.11.2026) hvis de ble lagret tidligere
+(function(){
+  const REMOVE = [1794900000001];
+  const before = entries.length;
+  entries = entries.filter(e=>!REMOVE.includes(e.id));
+  if(entries.length!==before) save();
+})();
+// Forhåndsregistrerte oppføringer (legges inn én gang)
+const SEED = [{id:1794932000001, date:'2026-11-17', hours:3.5, note:''}];
+(function(){
+  let seeded = [];
+  try{ seeded = JSON.parse(localStorage.getItem(KEY+'_seeded')) || []; }catch(e){}
+  SEED.forEach(s=>{ if(!seeded.includes(s.id) && !entries.some(e=>e.id===s.id)){ entries.push(s); seeded.push(s.id); } });
+  try{ localStorage.setItem(KEY+'_seeded', JSON.stringify(seeded)); }catch(e){}
+  save();
+})();
+let view = new Date(); view.setDate(1);
+
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || []; }catch(e){ return []; } }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(entries)); }catch(e){} }
+const fmt = n => (Math.round(n*100)/100).toLocaleString('no-NO');
+const iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const ym = (y,m) => y+'-'+String(m+1).padStart(2,'0');
+
+document.getElementById('date').value = iso(new Date());
+
+document.getElementById('f').addEventListener('submit', e=>{ e.preventDefault(); addEntry(); });
+document.getElementById('add').addEventListener('click', addEntry);
+function addEntry(){
+  const msg = document.getElementById('msg'); msg.textContent='';
+  const date = document.getElementById('date').value;
+  const hours = parseFloat(String(document.getElementById('hours').value).replace(',','.'));
+  if(!date){ msg.textContent='Velg en dato.'; return; }
+  if(!(hours>0)){ msg.textContent='Skriv inn antall timer.'; return; }
+  entries.push({id:Date.now(), date, hours, note:document.getElementById('note').value.trim()});
+  save();
+  const d = new Date(date+'T00:00'); view = new Date(d.getFullYear(), d.getMonth(), 1);
+  document.getElementById('hours').value=''; document.getElementById('note').value='';
+  render();
+}
+
+document.getElementById('prev').onclick = ()=>{ view.setMonth(view.getMonth()-1); render(); };
+document.getElementById('next').onclick = ()=>{ view.setMonth(view.getMonth()+1); render(); };
+
+function del(id, btn){
+  if(btn.dataset.armed){ entries = entries.filter(x=>x.id!==id); save(); render(); return; }
+  btn.dataset.armed='1'; btn.textContent='Slett?'; btn.style.color='var(--danger)';
+  setTimeout(()=>{ if(btn.isConnected){ delete btn.dataset.armed; btn.textContent='×'; btn.style.color=''; } }, 3000);
+}
+
+function item(e){
+  const d = new Date(e.date+'T00:00');
+  const li = document.createElement('li');
+  li.innerHTML = `<div class="d"><b>${d.getDate()}. ${MONTHS[d.getMonth()]}</b><span>${d.toLocaleDateString('no-NO',{weekday:'short'})}</span></div>
+    <div class="note"></div><div class="h">${fmt(e.hours)} t</div>
+    <button class="del" aria-label="Slett">×</button>`;
+  li.querySelector('.note').textContent = e.note || '';
+  const btn = li.querySelector('.del'); btn.onclick = ()=>del(e.id, btn);
+  return li;
+}
+
+const openMonths = new Set();
+function renderHistory(){
+  const hist = document.getElementById('hist');
+  hist.innerHTML = '';
+  const sorted = [...entries].sort((a,b)=>b.date.localeCompare(a.date) || b.id-a.id);
+  const total = sorted.reduce((s,e)=>s+e.hours,0);
+  document.getElementById('histCount').textContent = sorted.length ? `${sorted.length} registreringer · ${fmt(total)} t` : '';
+  if(!sorted.length){ hist.innerHTML = '<div class="empty">Ingen registreringer ennå</div>'; return; }
+  const groups = {};
+  sorted.forEach(e=>{ const k=e.date.slice(0,7); (groups[k]=groups[k]||[]).push(e); });
+  let lastYear = null;
+  Object.keys(groups).forEach(k=>{
+    const [y,m] = k.split('-').map(Number);
+    if(y!==lastYear){
+      const ysum = sorted.filter(e=>e.date.startsWith(y+'-')).reduce((s,e)=>s+e.hours,0);
+      const h = document.createElement('div'); h.className='yr'; h.textContent = `${y} · ${fmt(ysum)} t`;
+      hist.appendChild(h); lastYear = y;
+    }
+    const det = document.createElement('details');
+    if(openMonths.has(k)) det.open = true;
+    det.addEventListener('toggle',()=>{ det.open ? openMonths.add(k) : openMonths.delete(k); });
+    const sum = groups[k].reduce((s,e)=>s+e.hours,0);
+    const name = new Date(y,m-1,1).toLocaleDateString('no-NO',{month:'long'});
+    det.innerHTML = `<summary><span class="m">${name} <span style="color:var(--muted);font-size:.85rem">(${groups[k].length})</span></span><span class="s">${fmt(sum)} t</span></summary>`;
+    const ul = document.createElement('ul');
+    groups[k].forEach(e=>ul.appendChild(item(e)));
+    det.appendChild(ul);
+    hist.appendChild(det);
+  });
+}
+
+function render(){
+  const y = view.getFullYear(), m = view.getMonth(), key = ym(y,m);
+  const monthEntries = entries.filter(e=>e.date.startsWith(key)).sort((a,b)=>b.date.localeCompare(a.date));
+  const monthSum = monthEntries.reduce((s,e)=>s+e.hours,0);
+  const yearSum = entries.filter(e=>e.date.startsWith(y+'-')).reduce((s,e)=>s+e.hours,0);
+
+  const title = view.toLocaleDateString('no-NO',{month:'long',year:'numeric'});
+  document.getElementById('monthTitle').textContent = title;
+  document.getElementById('lblMonth').textContent = MONTHS[m]+' '+y;
+  document.getElementById('lblYear').textContent = 'Totalt '+y;
+  document.getElementById('sumMonth').innerHTML = fmt(monthSum)+' <small>t</small>';
+  document.getElementById('sumYear').innerHTML = fmt(yearSum)+' <small>t</small>';
+  document.getElementById('yearTitle').textContent = 'Per måned '+y;
+
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  if(!monthEntries.length){ list.innerHTML = '<li class="empty" style="display:block">Ingen overtid registrert denne måneden</li>'; }
+  monthEntries.forEach(e=>list.appendChild(item(e)));
+  renderHistory();
+
+  const sums = MONTHS.map((_,i)=>entries.filter(e=>e.date.startsWith(ym(y,i))).reduce((s,e)=>s+e.hours,0));
+  const max = Math.max(...sums, 1);
+  const bars = document.getElementById('bars'); bars.innerHTML='';
+  sums.forEach((s,i)=>{
+    const b = document.createElement('div');
+    b.className = 'bar'+(i===m?' on':'');
+    b.style.height = (s/max*100)+'%';
+    b.title = MONTHS[i]+': '+fmt(s)+' t';
+    b.onclick = ()=>{ view = new Date(y,i,1); render(); };
+    bars.appendChild(b);
+  });
+  const ml = document.getElementById('mlist'); ml.innerHTML='';
+  const order = [0,6,1,7,2,8,3,9,4,10,5,11];
+  order.forEach(i=>{
+    const r = document.createElement('div');
+    r.className = 'mrow'+(sums[i]?'':' zero')+(i===m?' on':'');
+    r.innerHTML = `<span class="k">${new Date(y,i,1).toLocaleDateString('no-NO',{month:'long'})}</span><span class="v">${fmt(sums[i])} t</span>`;
+    r.onclick = ()=>{ view = new Date(y,i,1); render(); };
+    ml.appendChild(r);
+  });
+  const t = document.createElement('div'); t.className='mtot';
+  t.innerHTML = `<span>Totalt ${y}</span><span>${fmt(sums.reduce((a,b)=>a+b,0))} t</span>`;
+  ml.appendChild(t);
+  document.getElementById('barlbl').innerHTML = MONTHS.map(x=>`<span>${x[0].toUpperCase()}</span>`).join('');
+}
+
+document.getElementById('exp').onclick = ()=>{
+  const msg = document.getElementById('msg');
+  const json = JSON.stringify(entries);
+  try{
+    const blob = new Blob([json],{type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'overtid-'+iso(new Date())+'.json'; a.click();
+  }catch(e){}
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(json).then(()=>{ msg.style.color='var(--accent)'; msg.textContent='Sikkerhetskopi kopiert – lim den inn i et notat og lagre den.'; setTimeout(()=>{msg.textContent='';msg.style.color='';},5000); }).catch(()=>{});
+  }
+};
+document.getElementById('imp').onclick = ()=>document.getElementById('file').click();
+document.getElementById('file').onchange = ev=>{
+  const f = ev.target.files[0]; if(!f) return;
+  f.text().then(t=>{
+    try{
+      const data = JSON.parse(t);
+      if(Array.isArray(data)){
+        const ids = new Set(entries.map(e=>e.id));
+        data.forEach(e=>{ if(e && e.date && e.hours>0 && !ids.has(e.id)) entries.push(e); });
+        save(); render();
+      }
+    }catch(e){ document.getElementById('msg').textContent='Kunne ikke lese filen.'; }
+  });
+  ev.target.value='';
+};
+
+render();
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
