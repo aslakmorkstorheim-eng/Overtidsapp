@@ -137,22 +137,6 @@
 const KEY = 'overtidslogg_v1';
 const MONTHS = ['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
 let entries = load();
-// Fjern de forhåndsregistrerte 2 timene (17.11.2026) hvis de ble lagret tidligere
-(function(){
-  const REMOVE = [1794900000001];
-  const before = entries.length;
-  entries = entries.filter(e=>!REMOVE.includes(e.id));
-  if(entries.length!==before) save();
-})();
-// Forhåndsregistrerte oppføringer (legges inn én gang)
-const SEED = [{id:1794932000001, date:'2026-11-17', hours:3.5, note:''}];
-(function(){
-  let seeded = [];
-  try{ seeded = JSON.parse(localStorage.getItem(KEY+'_seeded')) || []; }catch(e){}
-  SEED.forEach(s=>{ if(!seeded.includes(s.id) && !entries.some(e=>e.id===s.id)){ entries.push(s); seeded.push(s.id); } });
-  try{ localStorage.setItem(KEY+'_seeded', JSON.stringify(seeded)); }catch(e){}
-  save();
-})();
 let view = new Date(); view.setDate(1);
 
 function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || []; }catch(e){ return []; } }
