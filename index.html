@@ -12,12 +12,13 @@
 <meta name="apple-mobile-web-app-title" content="Overtid">
 <style>
   :root{
+    --out:#b46a1f; --out-soft:#f6e9da;
     --bg:#f4f1ec; --card:#fff; --ink:#1f2328; --muted:#6b7280; --line:#e6e1d8;
     --accent:#1f6f5c; --accent-soft:#e3f1ec; --danger:#b4412f;
   }
   @media (prefers-color-scheme: dark){
     :root{ --bg:#16181b; --card:#1f2226; --ink:#e9e6e1; --muted:#9aa0a6; --line:#2e3237;
-      --accent:#5cc3a6; --accent-soft:#1d3530; --danger:#e07a68; }
+      --accent:#5cc3a6; --accent-soft:#1d3530; --danger:#e07a68; --out:#e0a463; --out-soft:#3a2c1c; }
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
@@ -80,6 +81,20 @@
   .mrow.zero .v{color:var(--muted);font-weight:400}
   .mrow.on .k,.mrow.on .v{color:var(--accent)}
   .mtot{grid-column:1/-1;display:flex;justify-content:space-between;padding:9px 0 0;border-top:2px solid var(--line);font-weight:700}
+  .saldo{grid-column:1/-1;display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--line);padding-top:12px}
+  .saldo .lbl{font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .saldo .sv{font-size:1.4rem;font-weight:700;font-variant-numeric:tabular-nums}
+  .saldo .sub{font-size:.8rem;color:var(--muted);margin-top:2px}
+  .saldo .sv.neg{color:var(--danger)}
+  .stat .sub{font-size:.8rem;color:var(--muted)}
+  .seg{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+  .seg button{background:none;color:var(--muted);padding:8px;font-weight:600;border-radius:8px}
+  .seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.15)}
+  .seg button.on.out{color:var(--out)}
+  .primary.out{background:var(--out)}
+  .h.out{color:var(--out)}
+  .tag{font-size:.7rem;font-weight:600;color:var(--out);background:var(--out-soft);border-radius:6px;padding:1px 6px;margin-right:6px;white-space:nowrap}
+  .mrow .v .o, summary .s .o{color:var(--out);font-weight:600;font-size:.85rem;margin-left:6px}
   .tools{display:flex;gap:8px;justify-content:center;margin-top:8px}
   .tools button{background:none;color:var(--muted);font-size:.85rem;text-decoration:underline;padding:4px}
 </style>
@@ -89,14 +104,19 @@
   <h1>Overtidslogg</h1>
 
   <div class="card stats">
-    <div class="stat main"><div class="lbl" id="lblMonth">Denne måneden</div><div class="val" id="sumMonth">0</div></div>
+    <div class="stat main"><div class="lbl" id="lblMonth">Denne måneden</div><div class="val" id="sumMonth">0</div><div class="sub" id="outMonth"></div></div>
     <div class="stat"><div class="lbl" id="lblYear">Hittil i år</div><div class="val" id="sumYear">0</div></div>
+    <div class="saldo"><div><div class="lbl">Saldo til avspasering</div><div class="sub" id="saldoSub"></div></div><div class="sv" id="saldo">0 t</div></div>
   </div>
 
   <div class="card">
     <form id="f">
+      <div class="seg" role="tablist">
+        <button type="button" id="modeIn" class="on">+ Overtid</button>
+        <button type="button" id="modeOut">− Ta ut timer</button>
+      </div>
       <div><label for="date">Dato</label><input type="date" id="date" required></div>
-      <div><label for="hours">Timer overtid</label><input type="number" id="hours" step="0.25" min="0.25" max="24" placeholder="f.eks. 1.5" required></div>
+      <div><label for="hours" id="hoursLbl">Timer overtid</label><input type="number" id="hours" step="0.25" min="0.25" max="24" placeholder="f.eks. 1.5" required></div>
       <div class="full"><label for="note">Notat (valgfritt)</label><input type="text" id="note" maxlength="80" placeholder="Hva jobbet du med?"></div>
       <div class="full" id="editbar" style="display:none;font-size:.85rem;color:var(--accent)">Endrer registrering</div>
       <button class="primary" type="button" id="add" style="grid-column:1/-1">Legg til</button>
@@ -158,16 +178,36 @@ function addEntry(){
   const note = document.getElementById('note').value.trim();
   if(editingId!==null){
     const e = entries.find(x=>x.id===editingId);
-    if(e){ e.date=date; e.hours=hours; e.note=note; }
+    if(e){ e.date=date; e.hours=hours; e.note=note; if(mode==='ut') e.type='ut'; else delete e.type; }
     stopEdit(true);
   } else {
-    entries.push({id:Date.now(), date, hours, note});
+    const ne = {id:Date.now(), date, hours, note}; if(mode==='ut') ne.type='ut';
+    entries.push(ne);
   }
   save();
   const d = new Date(date+'T00:00'); view = new Date(d.getFullYear(), d.getMonth(), 1);
   document.getElementById('hours').value=''; document.getElementById('note').value='';
+  setMode('inn');
   render();
 }
+
+let mode = 'inn';
+function setMode(m){
+  mode = m;
+  const out = m==='ut';
+  document.getElementById('modeIn').className = out ? '' : 'on';
+  document.getElementById('modeOut').className = out ? 'on out' : '';
+  document.getElementById('hoursLbl').textContent = out ? 'Timer tatt ut' : 'Timer overtid';
+  document.getElementById('note').placeholder = out ? 'F.eks. avspasering, fri fredag' : 'Hva jobbet du med?';
+  const add = document.getElementById('add');
+  add.classList.toggle('out', out);
+  if(editingId===null) add.textContent = out ? 'Ta ut timer' : 'Legg til';
+}
+document.getElementById('modeIn').onclick = ()=>setMode('inn');
+document.getElementById('modeOut').onclick = ()=>setMode('ut');
+const isOut = e => e.type==='ut';
+const earned = arr => arr.filter(e=>!isOut(e)).reduce((s,e)=>s+e.hours,0);
+const taken = arr => arr.filter(isOut).reduce((s,e)=>s+e.hours,0);
 
 let editingId = null;
 function startEdit(e){
@@ -175,6 +215,7 @@ function startEdit(e){
   document.getElementById('date').value = e.date;
   document.getElementById('hours').value = e.hours;
   document.getElementById('note').value = e.note || '';
+  setMode(isOut(e) ? 'ut' : 'inn');
   document.getElementById('add').textContent = 'Lagre endring';
   document.getElementById('add').style.gridColumn = 'auto';
   document.getElementById('cancel').style.display = '';
@@ -185,11 +226,12 @@ function startEdit(e){
 }
 function stopEdit(keepValues){
   editingId = null;
-  document.getElementById('add').textContent = 'Legg til';
   document.getElementById('add').style.gridColumn = '1/-1';
+  setMode(mode);
   document.getElementById('cancel').style.display = 'none';
   document.getElementById('editbar').style.display = 'none';
   if(!keepValues){
+    setMode('inn');
     document.getElementById('date').value = iso(new Date());
     document.getElementById('hours').value=''; document.getElementById('note').value='';
     render();
@@ -210,9 +252,9 @@ function item(e){
   const d = new Date(e.date+'T00:00');
   const li = document.createElement('li');
   li.innerHTML = `<div class="d"><b>${d.getDate()}. ${MONTHS[d.getMonth()]}</b><span>${d.toLocaleDateString('no-NO',{weekday:'short'})}</span></div>
-    <div class="note"></div><div class="h">${fmt(e.hours)} t</div>
+    <div class="note">${isOut(e)?'<span class="tag">Tatt ut</span>':''}<span class="nt"></span></div><div class="h${isOut(e)?' out':''}">${isOut(e)?'−':''}${fmt(e.hours)} t</div>
     <button class="edit" aria-label="Endre">✎</button><button class="del" aria-label="Slett">×</button>`;
-  li.querySelector('.note').textContent = e.note || '';
+  li.querySelector('.nt').textContent = e.note || '';
   if(e.id===editingId) li.classList.add('editing');
   li.querySelector('.edit').onclick = ()=>startEdit(e);
   const btn = li.querySelector('.del'); btn.onclick = ()=>del(e.id, btn);
@@ -224,8 +266,7 @@ function renderHistory(){
   const hist = document.getElementById('hist');
   hist.innerHTML = '';
   const sorted = [...entries].sort((a,b)=>b.date.localeCompare(a.date) || b.id-a.id);
-  const total = sorted.reduce((s,e)=>s+e.hours,0);
-  document.getElementById('histCount').textContent = sorted.length ? `${sorted.length} registreringer · ${fmt(total)} t` : '';
+  document.getElementById('histCount').textContent = sorted.length ? `${sorted.length} registreringer` : '';
   if(!sorted.length){ hist.innerHTML = '<div class="empty">Ingen registreringer ennå</div>'; return; }
   const groups = {};
   sorted.forEach(e=>{ const k=e.date.slice(0,7); (groups[k]=groups[k]||[]).push(e); });
@@ -233,16 +274,17 @@ function renderHistory(){
   Object.keys(groups).forEach(k=>{
     const [y,m] = k.split('-').map(Number);
     if(y!==lastYear){
-      const ysum = sorted.filter(e=>e.date.startsWith(y+'-')).reduce((s,e)=>s+e.hours,0);
-      const h = document.createElement('div'); h.className='yr'; h.textContent = `${y} · ${fmt(ysum)} t`;
+      const ye = sorted.filter(e=>e.date.startsWith(y+'-'));
+      const yo = taken(ye);
+      const h = document.createElement('div'); h.className='yr'; h.textContent = `${y} · ${fmt(earned(ye))} t overtid`+(yo?` · ${fmt(yo)} t tatt ut`:'');
       hist.appendChild(h); lastYear = y;
     }
     const det = document.createElement('details');
     if(openMonths.has(k)) det.open = true;
     det.addEventListener('toggle',()=>{ det.open ? openMonths.add(k) : openMonths.delete(k); });
-    const sum = groups[k].reduce((s,e)=>s+e.hours,0);
+    const sum = earned(groups[k]), out = taken(groups[k]);
     const name = new Date(y,m-1,1).toLocaleDateString('no-NO',{month:'long'});
-    det.innerHTML = `<summary><span class="m">${name} <span style="color:var(--muted);font-size:.85rem">(${groups[k].length})</span></span><span class="s">${fmt(sum)} t</span></summary>`;
+    det.innerHTML = `<summary><span class="m">${name} <span style="color:var(--muted);font-size:.85rem">(${groups[k].length})</span></span><span class="s">${fmt(sum)} t${out?`<span class="o">−${fmt(out)}</span>`:''}</span></summary>`;
     const ul = document.createElement('ul');
     groups[k].forEach(e=>ul.appendChild(item(e)));
     det.appendChild(ul);
@@ -253,8 +295,13 @@ function renderHistory(){
 function render(){
   const y = view.getFullYear(), m = view.getMonth(), key = ym(y,m);
   const monthEntries = entries.filter(e=>e.date.startsWith(key)).sort((a,b)=>b.date.localeCompare(a.date));
-  const monthSum = monthEntries.reduce((s,e)=>s+e.hours,0);
-  const yearSum = entries.filter(e=>e.date.startsWith(y+'-')).reduce((s,e)=>s+e.hours,0);
+  const monthSum = earned(monthEntries), monthOut = taken(monthEntries);
+  const yearSum = earned(entries.filter(e=>e.date.startsWith(y+'-')));
+  const totIn = earned(entries), totOut = taken(entries), bal = totIn - totOut;
+  const sEl = document.getElementById('saldo');
+  sEl.textContent = fmt(bal)+' t'; sEl.classList.toggle('neg', bal<0);
+  document.getElementById('saldoSub').textContent = `Opptjent ${fmt(totIn)} t · Tatt ut ${fmt(totOut)} t`;
+  document.getElementById('outMonth').textContent = monthOut ? `Tatt ut: ${fmt(monthOut)} t` : '';
 
   const title = view.toLocaleDateString('no-NO',{month:'long',year:'numeric'});
   document.getElementById('monthTitle').textContent = title;
@@ -266,11 +313,12 @@ function render(){
 
   const list = document.getElementById('list');
   list.innerHTML = '';
-  if(!monthEntries.length){ list.innerHTML = '<li class="empty" style="display:block">Ingen overtid registrert denne måneden</li>'; }
+  if(!monthEntries.length){ list.innerHTML = '<li class="empty" style="display:block">Ingen registreringer denne måneden</li>'; }
   monthEntries.forEach(e=>list.appendChild(item(e)));
   renderHistory();
 
-  const sums = MONTHS.map((_,i)=>entries.filter(e=>e.date.startsWith(ym(y,i))).reduce((s,e)=>s+e.hours,0));
+  const sums = MONTHS.map((_,i)=>earned(entries.filter(e=>e.date.startsWith(ym(y,i)))));
+  const outs = MONTHS.map((_,i)=>taken(entries.filter(e=>e.date.startsWith(ym(y,i)))));
   const max = Math.max(...sums, 1);
   const bars = document.getElementById('bars'); bars.innerHTML='';
   sums.forEach((s,i)=>{
@@ -285,13 +333,14 @@ function render(){
   const order = [0,6,1,7,2,8,3,9,4,10,5,11];
   order.forEach(i=>{
     const r = document.createElement('div');
-    r.className = 'mrow'+(sums[i]?'':' zero')+(i===m?' on':'');
-    r.innerHTML = `<span class="k">${new Date(y,i,1).toLocaleDateString('no-NO',{month:'long'})}</span><span class="v">${fmt(sums[i])} t</span>`;
+    r.className = 'mrow'+(sums[i]||outs[i]?'':' zero')+(i===m?' on':'');
+    r.innerHTML = `<span class="k">${new Date(y,i,1).toLocaleDateString('no-NO',{month:'long'})}</span><span class="v">${fmt(sums[i])} t${outs[i]?`<span class="o">−${fmt(outs[i])}</span>`:''}</span>`;
     r.onclick = ()=>{ view = new Date(y,i,1); render(); };
     ml.appendChild(r);
   });
   const t = document.createElement('div'); t.className='mtot';
-  t.innerHTML = `<span>Totalt ${y}</span><span>${fmt(sums.reduce((a,b)=>a+b,0))} t</span>`;
+  const yOut = outs.reduce((a,b)=>a+b,0);
+  t.innerHTML = `<span>Totalt ${y}</span><span>${fmt(sums.reduce((a,b)=>a+b,0))} t${yOut?`<span style="color:var(--out);font-size:.85rem;margin-left:6px">−${fmt(yOut)}</span>`:''}</span>`;
   ml.appendChild(t);
   document.getElementById('barlbl').innerHTML = MONTHS.map(x=>`<span>${x[0].toUpperCase()}</span>`).join('');
 }
