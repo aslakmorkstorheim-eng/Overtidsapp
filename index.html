@@ -87,6 +87,8 @@
   .saldo .sub{font-size:.8rem;color:var(--muted);margin-top:2px}
   .saldo .sv.neg{color:var(--danger)}
   .stat .sub{font-size:.8rem;color:var(--muted)}
+  .stat .val .reg{font-size:1.1rem;font-weight:600;color:var(--muted)}
+  .stat .val.neg{color:var(--danger)}
   .seg{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
   .seg button{background:none;color:var(--muted);padding:8px;font-weight:600;border-radius:8px}
   .seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.15)}
@@ -105,8 +107,7 @@
 
   <div class="card stats">
     <div class="stat main"><div class="lbl" id="lblMonth">Denne måneden</div><div class="val" id="sumMonth">0</div><div class="sub" id="outMonth"></div></div>
-    <div class="stat"><div class="lbl" id="lblYear">Hittil i år</div><div class="val" id="sumYear">0</div></div>
-    <div class="saldo"><div><div class="lbl">Saldo til avspasering</div><div class="sub" id="saldoSub"></div></div><div class="sv" id="saldo">0 t</div></div>
+    <div class="stat"><div class="lbl" id="lblYear">Hittil i år</div><div class="val" id="sumYear">0</div><div class="sub" id="outYear"></div></div>
   </div>
 
   <div class="card">
@@ -297,18 +298,20 @@ function render(){
   const monthEntries = entries.filter(e=>e.date.startsWith(key)).sort((a,b)=>b.date.localeCompare(a.date));
   const monthSum = earned(monthEntries), monthOut = taken(monthEntries);
   const yearSum = earned(entries.filter(e=>e.date.startsWith(y+'-')));
-  const totIn = earned(entries), totOut = taken(entries), bal = totIn - totOut;
-  const sEl = document.getElementById('saldo');
-  sEl.textContent = fmt(bal)+' t'; sEl.classList.toggle('neg', bal<0);
-  document.getElementById('saldoSub').textContent = `Opptjent ${fmt(totIn)} t · Tatt ut ${fmt(totOut)} t`;
-  document.getElementById('outMonth').textContent = monthOut ? `Tatt ut: ${fmt(monthOut)} t` : '';
+  const yearOut = taken(entries.filter(e=>e.date.startsWith(y+'-')));
+  const showStat = (valId, subId, reg, out)=>{
+    const net = reg - out, el = document.getElementById(valId);
+    el.innerHTML = `${fmt(net)}<span class="reg"> / ${fmt(reg)} t</span>`;
+    el.classList.toggle('neg', net<0);
+    document.getElementById(subId).textContent = 'Igjen / registrert';
+  };
+  showStat('sumMonth','outMonth', monthSum, monthOut);
+  showStat('sumYear','outYear', yearSum, yearOut);
 
   const title = view.toLocaleDateString('no-NO',{month:'long',year:'numeric'});
   document.getElementById('monthTitle').textContent = title;
   document.getElementById('lblMonth').textContent = MONTHS[m]+' '+y;
   document.getElementById('lblYear').textContent = 'Totalt '+y;
-  document.getElementById('sumMonth').innerHTML = fmt(monthSum)+' <small>t</small>';
-  document.getElementById('sumYear').innerHTML = fmt(yearSum)+' <small>t</small>';
   document.getElementById('yearTitle').textContent = 'Per måned '+y;
 
   const list = document.getElementById('list');
